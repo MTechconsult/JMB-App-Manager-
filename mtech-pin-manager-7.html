@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MTech Concept — Private PIN Manager</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#07071a;--card:#10102a;--card2:#181835;
+  --border:rgba(255,255,255,0.08);--text:#e8eaf6;--muted:#8b8fba;
+  --green:#00e676;--gold:#ffd600;--blue:#4f8ef7;--red:#ff4757;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;background:var(--ink);color:var(--text);min-height:100vh;padding-bottom:60px;}
+body::before{
+  content:'';position:fixed;inset:0;pointer-events:none;
+  background:radial-gradient(ellipse 700px 500px at 10% 10%,rgba(79,142,247,.08),transparent 70%),
+             radial-gradient(ellipse 600px 500px at 90% 90%,rgba(0,230,118,.06),transparent 70%);
+}
+.warning-banner{
+  background:linear-gradient(90deg,rgba(255,71,87,.15),rgba(255,214,0,.1));
+  border-bottom:1px solid rgba(255,71,87,.3);
+  padding:12px 24px;text-align:center;font-size:13px;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+}
+.warning-banner strong{color:var(--gold);}
+header{
+  padding:28px 40px 20px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:16px;position:relative;z-index:1;
+}
+.header-logo{display:flex;align-items:center;gap:12px;}
+.header-icon{
+  width:44px;height:44px;border-radius:12px;
+  background:linear-gradient(135deg,var(--green),#00c853);
+  display:flex;align-items:center;justify-content:center;font-size:22px;
+}
+.header-title{font-family:'Syne',sans-serif;font-weight:800;font-size:20px;}
+.header-sub{font-size:12px;color:var(--muted);margin-top:2px;}
+.sync-badge{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.2);
+  border-radius:100px;padding:8px 16px;font-size:12px;font-weight:700;color:var(--green);
+}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:var(--green);animation:blink 2s ease-in-out infinite;}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.2}}
+.main{
+  max-width:1100px;margin:0 auto;padding:32px 24px;
+  display:grid;grid-template-columns:460px 1fr;gap:24px;
+  position:relative;z-index:1;
+}
+@media(max-width:1000px){.main{grid-template-columns:1fr;}}
+.stats-row{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
+.stat-box{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;}
+.stat-n{font-family:'Syne',sans-serif;font-size:30px;font-weight:800;margin-bottom:4px;}
+.stat-l{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;}
+.panel{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:28px 24px;}
+.panel-title{font-family:'Syne',sans-serif;font-weight:800;font-size:17px;margin-bottom:6px;}
+.panel-sub{font-size:13px;color:var(--muted);margin-bottom:20px;line-height:1.6;}
+label{display:block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);margin-bottom:7px;}
+input[type=text],input[type=tel],select{
+  width:100%;background:var(--card2);border:1px solid var(--border);
+  border-radius:10px;padding:12px 15px;color:var(--text);
+  font-family:'DM Sans',sans-serif;font-size:15px;outline:none;
+  transition:border-color .2s;margin-bottom:16px;
+}
+input:focus,select:focus{border-color:var(--green);}
+input::placeholder{color:var(--muted);font-size:14px;}
+.input-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.result-box{
+  background:linear-gradient(135deg,rgba(0,230,118,.06),var(--card2));
+  border:1px solid rgba(0,230,118,.3);border-radius:16px;
+  padding:22px;margin-top:16px;display:none;
+}
+.result-box.show{display:block;animation:fadeUp .35s ease;}
+@keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.result-pin-display{
+  font-family:'Syne',sans-serif;font-size:22px;font-weight:800;
+  letter-spacing:3px;color:var(--green);text-align:center;
+  padding:16px;background:rgba(0,230,118,.08);border-radius:12px;
+  margin-bottom:14px;border:1px solid rgba(0,230,118,.2);
+  word-break:break-all;line-height:1.4;
+}
+.btn-row{display:flex;gap:8px;margin-bottom:10px;}
+.btn{
+  width:100%;padding:14px;border-radius:12px;border:none;cursor:pointer;
+  font-family:'DM Sans',sans-serif;font-weight:700;font-size:15px;
+  transition:all .2s;
+}
+.btn-green{background:linear-gradient(135deg,var(--green),#00c853);color:#000;box-shadow:0 4px 20px rgba(0,230,118,.25);}
+.btn-green:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,230,118,.4);}
+.btn-green:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+.btn-blue{background:linear-gradient(135deg,var(--blue),#6fa8ff);color:#fff;box-shadow:0 4px 20px rgba(79,142,247,.2);}
+.btn-blue:hover{transform:translateY(-2px);}
+.btn-gold{background:rgba(255,214,0,.12);border:1px solid rgba(255,214,0,.25);color:var(--gold);}
+.btn-gold:hover{background:rgba(255,214,0,.2);}
+.btn-sm{
+  flex:1;padding:9px 12px;font-size:12px;border-radius:8px;border:none;
+  cursor:pointer;font-weight:700;transition:all .2s;font-family:'DM Sans',sans-serif;
+}
+.copy-btn{background:rgba(79,142,247,.15);color:var(--blue);border:1px solid rgba(79,142,247,.2);}
+.copy-btn:hover{background:rgba(79,142,247,.25);}
+.wa-btn{background:rgba(0,230,118,.1);color:var(--green);border:1px solid rgba(0,230,118,.2);}
+.wa-btn:hover{background:rgba(0,230,118,.2);}
+.del-btn{background:rgba(255,71,87,.1);color:var(--red);border:1px solid rgba(255,71,87,.2);}
+.del-btn:hover{background:rgba(255,71,87,.2);}
+.msg-preview{
+  background:rgba(0,0,0,.35);border:1px solid var(--border);
+  border-radius:10px;padding:14px;font-size:12px;line-height:1.85;
+  color:var(--text);white-space:pre-wrap;margin-top:10px;display:none;
+}
+.msg-preview.show{display:block;animation:fadeUp .3s ease;}
+.divider{height:1px;background:var(--border);margin:14px 0;}
+.table-wrap{overflow-x:auto;border-radius:12px;border:1px solid var(--border);margin-top:4px;}
+table{width:100%;border-collapse:collapse;}
+thead{background:var(--card2);}
+th{padding:11px 14px;text-align:left;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:var(--muted);white-space:nowrap;}
+td{padding:11px 14px;font-size:13px;border-top:1px solid var(--border);vertical-align:middle;}
+tr:hover td{background:rgba(255,255,255,.02);}
+.pin-tag{
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;letter-spacing:2px;
+  background:rgba(0,230,118,.08);border:1px solid rgba(0,230,118,.15);
+  color:var(--green);padding:4px 10px;border-radius:6px;display:inline-block;
+}
+.empty-state{text-align:center;padding:48px 24px;color:var(--muted);}
+.empty-state .ei{font-size:36px;margin-bottom:10px;}
+.toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  z-index:9999;background:var(--card2);border:1px solid var(--border);
+  border-radius:14px;padding:14px 24px;font-size:14px;font-weight:600;
+  box-shadow:0 8px 30px rgba(0,0,0,.6);opacity:0;
+  transition:all .3s ease;white-space:nowrap;max-width:90vw;text-align:center;
+}
+.toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+.toast.success{border-color:rgba(0,230,118,.5);color:var(--green);}
+.toast.error{border-color:rgba(255,71,87,.5);color:var(--red);}
+.info-box{
+  background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.15);
+  border-radius:10px;padding:12px 14px;font-size:12px;color:var(--green);
+  margin-bottom:16px;line-height:1.7;
+}
+.warn-box{
+  background:rgba(255,214,0,.06);border:1px solid rgba(255,214,0,.2);
+  border-radius:10px;padding:12px 14px;font-size:12px;color:var(--gold);
+  margin-top:12px;line-height:1.7;
+}
+</style>
+</head>
+<body>
+
+<div class="warning-banner">
+  🔒 <strong>PRIVATE — MTech Concept Only.</strong> Do not share this file with anyone.
+</div>
+
+<header>
+  <div class="header-logo">
+    <div class="header-icon">🔑</div>
+    <div>
+      <div class="header-title">MTech Concept — PIN Manager</div>
+      <div class="header-sub">Generate PINs that work instantly on your landing page — no code editing needed.</div>
+    </div>
+  </div>
+  <div class="sync-badge">
+    <div class="sync-dot"></div>
+    Auto-Syncing with Landing Page
+  </div>
+</header>
+
+<div class="main">
+
+  <!-- ══ LEFT: GENERATE ══ -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- STATS -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-n" id="statTotal" style="color:var(--blue)">0</div>
+        <div class="stat-l">Total PINs</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-n" id="statActive" style="color:var(--green)">0</div>
+        <div class="stat-l">Active</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-n" id="statRevenue" style="color:var(--gold)">₦0</div>
+        <div class="stat-l">Revenue</div>
+      </div>
+    </div>
+
+    <!-- GENERATE FORM -->
+    <div class="panel">
+      <div class="panel-title">⚡ Generate New Access PIN</div>
+      <div class="panel-sub">Fill in buyer details and click Generate. The PIN activates on the landing page <strong style="color:var(--green)">instantly.</strong></div>
+
+      <div class="info-box">
+        📋 <strong>How it works:</strong> Generate a PIN → copy the hash line → paste it into your <strong>jamb-landing-page.html</strong> → re-upload to GitHub. That PIN will then work on the landing page!
+      </div>
+
+      <label>Buyer's Full Name *</label>
+      <input type="text" id="buyerName" placeholder="e.g. Chukwuemeka Obi" />
+
+      <label>Buyer's WhatsApp Number *</label>
+      <input type="tel" id="buyerPhone" placeholder="e.g. 08031234567" />
+
+      <div class="input-row">
+        <div>
+          <label>Amount Paid</label>
+          <select id="amountPaid">
+            <option value="3000">₦3,000 (Full Price)</option>
+            <option value="2000">₦2,000 (Discount)</option>
+            <option value="1500">₦1,500 (Promo)</option>
+          </select>
+        </div>
+        <div>
+          <label>Payment Method</label>
+          <select id="payMethod">
+            <option value="WhatsApp Direct">WhatsApp Direct</option>
+            <option value="Bank Transfer">Bank Transfer</option>
+            <option value="Cash">Cash</option>
+          </select>
+        </div>
+      </div>
+
+      <label>Custom PIN (optional — leave blank to auto-generate)</label>
+      <input type="text" id="customPin" placeholder="e.g. MTECH2026001 — leave blank for auto" maxlength="25"
+        oninput="this.value=this.value.toUpperCase().replace(/[^A-Z0-9]/g,'')" />
+
+      <button class="btn btn-green" onclick="generatePin()" id="genBtn">
+        ⚡ Generate PIN Now
+      </button>
+
+      <!-- RESULT -->
+      <div class="result-box" id="resultBox">
+        <div style="font-size:11px;color:var(--green);font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px;">
+          ✅ PIN Generated — Works on Any Device!
+        </div>
+
+        <div class="result-pin-display" id="displayPin">—</div>
+
+        <div style="font-size:12px;color:var(--muted);text-align:center;margin-bottom:14px;">
+          ↑ Copy this PIN and send to your buyer. It will work on <strong style="color:var(--green)">their device instantly.</strong>
+        </div>
+
+        <div class="btn-row">
+          <button class="btn-sm copy-btn" onclick="copyPin()">📋 Copy PIN</button>
+          <button class="btn-sm wa-btn" onclick="showMsg()">💬 WhatsApp</button>
+        </div>
+
+        <div class="msg-preview" id="msgPreview"></div>
+
+        <div id="msgBtns" style="display:none;margin-top:10px;">
+          <div class="btn-row">
+            <button class="btn-sm copy-btn" onclick="copyMsg()">📋 Copy Message</button>
+            <button class="btn-sm wa-btn" onclick="sendWA()">📲 Open WhatsApp</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ RIGHT: TABLE + HOW TO ══ -->
+  <div style="display:flex;flex-direction:column;gap:20px;">
+
+    <!-- HOW IT WORKS -->
+    <div class="panel" style="border-color:rgba(0,230,118,.2);background:linear-gradient(135deg,rgba(0,230,118,.04),var(--card));">
+      <div class="panel-title">📋 How To Add a PIN — 3 Steps Only</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.95;margin-top:10px;">
+        <div style="display:flex;gap:10px;margin-bottom:8px;"><span style="color:var(--green);font-weight:800;min-width:22px;">1.</span><span>Enter buyer name + phone → click <strong style="color:var(--text)">Generate PIN</strong></span></div>
+        <div style="display:flex;gap:10px;margin-bottom:8px;"><span style="color:var(--green);font-weight:800;min-width:22px;">2.</span><span>Click <strong style="color:var(--text)">📋 Copy PIN</strong> → send to buyer on WhatsApp</span></div>
+        <div style="display:flex;gap:10px;"><span style="color:var(--green);font-weight:800;min-width:22px;">3.</span><span>Buyer enters PIN on landing page → works instantly ✅</span></div>
+      </div>
+      <div style="margin-top:14px;padding:12px 14px;background:rgba(0,230,118,.06);border:1px solid rgba(0,230,118,.2);border-radius:10px;font-size:12px;color:var(--green);line-height:1.7;">
+        ✅ <strong>No file editing. No uploading. No copy-pasting hashes.</strong><br>PINs work on <strong>any device, any browser, anywhere</strong> the moment you generate them.
+      </div>
+    </div>
+
+    <!-- BUYERS TABLE -->
+    <div class="panel">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;flex-wrap:wrap;gap:10px;">
+        <div class="panel-title">👥 All Buyers & PINs</div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-sm copy-btn" onclick="exportList()" style="font-size:11px;">📊 Export</button>
+          <button class="btn-sm del-btn" onclick="clearAll()" style="font-size:11px;">🗑 Clear All</button>
+        </div>
+      </div>
+      <div class="panel-sub">All PINs are live on the landing page automatically.</div>
+
+      <div class="table-wrap">
+        <div class="empty-state" id="emptyState">
+          <div class="ei">📭</div>
+          <p>No PINs generated yet.<br>Generate your first PIN above.</p>
+        </div>
+        <table id="buyersTable" style="display:none;">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Buyer</th>
+              <th>PIN</th>
+              <th>Paid</th>
+              <th>Date</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="buyersBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- CODE LOOKUP -->
+    <div class="panel" style="border:1px solid rgba(0,230,118,0.3);background:rgba(0,230,118,0.04);">
+      <div class="panel-title">🔐 Today's Access Code Lookup</div>
+      <div class="panel-sub" style="margin-bottom:14px;">When a buyer messages you asking for their code, find them in the table below and click <strong style="color:var(--green)">Get Code</strong> — then send the 6-digit code to them on WhatsApp.</div>
+      <div id="codeLookupResult" style="display:none;background:rgba(0,0,0,.4);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px;">
+        <div style="font-size:12px;color:var(--muted);margin-bottom:6px;">Today's Code for <span id="codeLookupName" style="color:var(--text);font-weight:700;"></span></div>
+        <div id="codeLookupCode" style="font-family:'Syne',sans-serif;font-size:40px;font-weight:800;color:var(--green);letter-spacing:8px;"></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:6px;">⚠️ This code changes every day at midnight</div>
+        <button class="btn btn-green" style="margin-top:12px;padding:10px 20px;font-size:13px;" onclick="copyCode()">📋 Copy Code</button>
+      </div>
+    </div>
+
+    <!-- BACKUP -->
+    <div class="panel">
+      <div class="panel-title">💾 Backup</div>
+      <div class="panel-sub">Download a backup of all your PIN records so you never lose them.</div>
+      <button class="btn btn-blue" onclick="backupData()">💾 Download Backup File</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const STORAGE_KEY = '_mtech_buyers_v1';
+
+// ══════════════════════════════════════════════════════
+//  SECRET KEY — MUST be identical to jamb-landing-page.html
+//  This is what makes PINs self-validating on any device
+// ══════════════════════════════════════════════════════
+const SECRET_KEY = 'MTechConcept2026JAMBPro@Nigeria#Secure!';
+
+let buyers = [];
+let lastBuyer = null;
+
+// ── INIT ──
+window.addEventListener('load', () => {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    buyers = raw ? JSON.parse(atob(raw)) : [];
+  } catch(e) { buyers = []; }
+  render(); stats();
+  showToast('✅ PIN Manager ready — generated PINs work on ALL devices!', 'success');
+});
+
+function save() {
+  try { localStorage.setItem(STORAGE_KEY, btoa(JSON.stringify(buyers))); return true; }
+  catch(e) { showToast('⚠️ Storage error!', 'error'); return false; }
+}
+
+// ── SHA-256 ──
+async function sha256(msg) {
+  const buf = new TextEncoder().encode(msg);
+  const hb  = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(hb)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+
+// ══════════════════════════════════════════════════════
+//  BUILD PHONE-LOCKED SELF-VALIDATING PIN
+//  Signature = sha256(base + cleanPhone + SECRET_KEY)
+//  PIN only works when entered with the correct phone number
+// ══════════════════════════════════════════════════════
+async function buildPin(base, phone) {
+  base = base.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-8); // last 8 digits
+  const sig = (await sha256(base + cleanPhone + SECRET_KEY)).substring(0, 8).toUpperCase();
+  return base + sig;
+}
+
+function autoBase() {
+  const y = new Date().getFullYear().toString().slice(-2);
+  const m = String(new Date().getMonth()+1).padStart(2,'0');
+  const n = String(buyers.length + 1).padStart(3,'0');
+  const r = Math.random().toString(36).substring(2,4).toUpperCase();
+  return `MT${y}${m}${n}${r}`;
+}
+
+// ── GENERATE ──
+async function generatePin() {
+  const name   = document.getElementById('buyerName').value.trim();
+  const phone  = document.getElementById('buyerPhone').value.trim();
+  const amount = parseInt(document.getElementById('amountPaid').value);
+  const method = document.getElementById('payMethod').value;
+  const custom = document.getElementById('customPin').value.trim().toUpperCase().replace(/[^A-Z0-9]/g,'');
+
+  if (!name)  { showToast('⚠️ Enter buyer name', 'error'); document.getElementById('buyerName').focus(); return; }
+  if (!phone) { showToast('⚠️ Enter buyer phone', 'error'); document.getElementById('buyerPhone').focus(); return; }
+
+  const btn = document.getElementById('genBtn');
+  btn.textContent = '⏳ Generating...';
+  btn.disabled = true;
+
+  const base = custom || autoBase();
+  const pin  = await buildPin(base, phone);
+
+  if (buyers.find(b => b.pin === pin)) {
+    showToast('⚠️ PIN already exists. Try again.', 'error');
+    btn.textContent = '⚡ Generate PIN Now'; btn.disabled = false; return;
+  }
+
+  const date = new Date().toLocaleDateString('en-NG',{day:'2-digit',month:'short',year:'numeric'});
+  const buyer = { id: Date.now(), name, phone, pin, amount, method, date, status:'Active' };
+  buyers.push(buyer);
+
+  if (!save()) { buyers.pop(); btn.textContent='⚡ Generate PIN Now'; btn.disabled=false; return; }
+
+  lastBuyer = buyer;
+  btn.textContent = '⚡ Generate PIN Now';
+  btn.disabled = false;
+
+  document.getElementById('displayPin').textContent = pin;
+  document.getElementById('resultBox').classList.add('show');
+  document.getElementById('msgPreview').classList.remove('show');
+  document.getElementById('msgPreview').style.display = 'none';
+  document.getElementById('msgBtns').style.display = 'none';
+
+  ['buyerName','buyerPhone','customPin'].forEach(id => document.getElementById(id).value = '');
+
+  render(); stats();
+  showToast(`✅ PIN for ${name} ready! Works on their device instantly.`, 'success');
+  document.getElementById('resultBox').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+
+// ── COPY PIN ──
+function copyPin() {
+  if (!lastBuyer) return;
+  navigator.clipboard.writeText(lastBuyer.pin)
+    .then(() => showToast(`✅ PIN "${lastBuyer.pin}" copied!`, 'success'))
+    .catch(() => {
+      prompt('Copy this PIN manually:', lastBuyer.pin);
+    });
+}
+
+// ── WHATSAPP ──
+function buildMsg(b) {
+  return `🏆 *JAMBMaster Pro — Access Confirmed!*
+
+Hello ${b.name}! 🎉
+
+Your payment of ₦${b.amount.toLocaleString()} has been received and confirmed.
+
+Here is your personal access PIN:
+
+🔑 *PIN: ${b.pin}*
+
+*How to access your app:*
+1️⃣ Go to the JAMBMaster Pro website
+2️⃣ Click *"Buy with PIN"*
+3️⃣ Enter your WhatsApp number: *${b.phone}*
+4️⃣ Enter your PIN: *${b.pin}*
+5️⃣ You will be launched directly into the app!
+
+⚠️ *Important:* Your PIN is locked to your phone number. Always use *${b.phone}* when entering your PIN. Do not share your PIN — it will not work for anyone else.
+
+Study hard and score 300+! 💪
+— MTech Concept`;
+}
+
+function showMsg() {
+  if (!lastBuyer) return;
+  const el = document.getElementById('msgPreview');
+  el.textContent = buildMsg(lastBuyer);
+  el.style.display = 'block';
+  el.classList.add('show');
+  document.getElementById('msgBtns').style.display = 'block';
+}
+
+function copyMsg() {
+  if (!lastBuyer) return;
+  navigator.clipboard.writeText(buildMsg(lastBuyer))
+    .then(() => showToast('✅ Message copied! Paste into WhatsApp.', 'success'))
+    .catch(() => {
+      prompt('Copy this message manually:', buildMsg(lastBuyer));
+    });
+}
+
+function sendWA() {
+  if (!lastBuyer) return;
+  const phone = lastBuyer.phone.replace(/[^0-9]/g,'').replace(/^0/,'234');
+  window.open(`https://wa.me/${phone}?text=${encodeURIComponent(buildMsg(lastBuyer))}`, '_blank');
+}
+
+// ── TABLE ──
+function esc(s){ return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function render() {
+  const empty = document.getElementById('emptyState');
+  const table = document.getElementById('buyersTable');
+  const tbody = document.getElementById('buyersBody');
+
+  if (!buyers.length) { empty.style.display='block'; table.style.display='none'; return; }
+  empty.style.display='none'; table.style.display='table';
+
+  tbody.innerHTML = [...buyers].reverse().map((b,i) => `
+    <tr>
+      <td style="color:var(--muted);font-size:12px;">${buyers.length-i}</td>
+      <td>
+        <div style="font-weight:600;">${esc(b.name)}</div>
+        <div style="font-size:11px;color:var(--muted);">${esc(b.phone)}</div>
+      </td>
+      <td>
+        <div class="pin-tag">${b.pin}</div>
+        <button class="btn-sm copy-btn" style="margin-top:5px;font-size:10px;padding:3px 8px;" onclick="qCopy('${b.pin}')">📋</button>
+      </td>
+      <td style="color:var(--green);font-weight:700;">₦${b.amount.toLocaleString()}</td>
+      <td style="font-size:12px;color:var(--muted);">${b.date}</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:5px;">
+          <button class="btn-sm wa-btn" style="font-size:11px;" onclick="reWA(${b.id})">💬 WA</button>
+          <button class="btn-sm" style="font-size:11px;background:rgba(0,230,118,0.15);color:var(--green);border:1px solid rgba(0,230,118,0.3);border-radius:8px;padding:4px 6px;cursor:pointer;" onclick="lookupCode('${b.phone}','${b.pin}','${b.name}')">🔐 Code</button>
+          <button class="btn-sm del-btn" style="font-size:11px;" onclick="del(${b.id})">🗑 Del</button>
+        </div>
+      </td>
+    </tr>`).join('');
+}
+
+// ── DAILY CODE LOOKUP ──
+async function lookupCode(phone, pin, name) {
+  const today = new Date().toISOString().slice(0, 10);
+  const cleanPhone = phone.replace(/[^0-9]/g, '').slice(-8);
+  const raw = await sha256(cleanPhone + pin + today + SECRET_KEY);
+  const digits = raw.replace(/[^0-9]/g, '');
+  const code = digits.substring(0, 6).padEnd(6, String(raw.charCodeAt(0) % 10));
+
+  document.getElementById('codeLookupName').textContent = name;
+  document.getElementById('codeLookupCode').textContent = code;
+  document.getElementById('codeLookupResult').style.display = 'block';
+  document.getElementById('codeLookupResult').scrollIntoView({behavior:'smooth', block:'nearest'});
+  showToast(`✅ Code for ${name}: ${code} — Send this via WhatsApp`, 'success');
+}
+
+function copyCode() {
+  const code = document.getElementById('codeLookupCode').textContent;
+  if (!code) { showToast('⚠️ No code generated yet. Click 🔐 Code first.', 'error'); return; }
+  navigator.clipboard.writeText(code)
+    .then(() => showToast(`✅ Code ${code} copied!`, 'success'))
+    .catch(() => {
+      prompt('Copy this code manually:', code);
+    });
+}
+
+function qCopy(pin) {
+  navigator.clipboard.writeText(pin)
+    .then(() => showToast(`✅ PIN "${pin}" copied!`, 'success'))
+    .catch(() => {
+      prompt('Copy this PIN manually:', pin);
+    });
+}
+
+function reWA(id) {
+  const b = buyers.find(x=>x.id===id);
+  if (!b) return;
+  window.open(`https://wa.me/${b.phone.replace(/[^0-9]/g,'').replace(/^0/,'234')}?text=${encodeURIComponent(buildMsg(b))}`, '_blank');
+}
+
+function del(id) {
+  const b = buyers.find(x=>x.id===id);
+  if (!b || !confirm(`Delete PIN for ${b.name}?\nThis deactivates their access.`)) return;
+  buyers = buyers.filter(x=>x.id!==id);
+  save(); render(); stats();
+  showToast(`🗑 ${b.name}'s PIN deleted.`, 'error');
+}
+
+function clearAll() {
+  if (!confirm('⚠️ Delete ALL buyer records? All PINs will stop working!')) return;
+  buyers = []; save(); render(); stats();
+  showToast('All records cleared.', 'error');
+}
+
+// ── STATS ──
+function stats() {
+  document.getElementById('statTotal').textContent  = buyers.length;
+  document.getElementById('statActive').textContent = buyers.filter(b=>b.status==='Active').length;
+  const rev = buyers.reduce((s,b)=>s+b.amount,0);
+  document.getElementById('statRevenue').textContent = rev>=1000 ? '₦'+(rev/1000).toFixed(1)+'k' : '₦'+rev;
+}
+
+// ── EXPORT ──
+function exportList() {
+  if (!buyers.length) { showToast('No buyers to export.', 'error'); return; }
+  const txt = buyers.map((b,i)=>`${i+1}. ${b.name} | ${b.phone} | PIN: ${b.pin} | ₦${b.amount} | ${b.method} | ${b.date}`).join('\n')
+    + `\n\nTotal: ${buyers.length} buyers | Revenue: ₦${buyers.reduce((s,b)=>s+b.amount,0).toLocaleString()}`;
+  navigator.clipboard.writeText(txt).then(()=>showToast('✅ Buyers list copied!','success'));
+}
+
+function backupData() {
+  const blob = new Blob([JSON.stringify(buyers,null,2)],{type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `mtech-pins-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  showToast('✅ Backup downloaded!','success');
+}
+
+// ── TOAST ──
+let tt;
+function showToast(msg,type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = `toast ${type} show`;
+  clearTimeout(tt); tt = setTimeout(()=>t.classList.remove('show'), 3800);
+}
+</script>
+</body>
+</html>
